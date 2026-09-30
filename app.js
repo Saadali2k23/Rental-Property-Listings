@@ -7,6 +7,7 @@ const methodOverride=require("method-override");
 const { log } = require('console');
 const ejsMate= require('ejs-mate');
 const wrapAsync = require("./utils/wrapAsync.js");
+const ExpressError = require("./utils/ExpressError.js");
 
 app.set("views",path.join(__dirname,"views"));
 app.set("view engine","ejs");
@@ -29,14 +30,14 @@ async function main(){
 
 
 //index route
-app.get("/listings",(req,res)=>{
+app.get("/listings",wrapAsync((req,res)=>{
    Listing.find({}).then((result)=>{
     let listings=result;
     res.render("listings/index.ejs",{listings});
    }).catch((err)=>{
     console.log(err);
    });
-})
+}))
 
 
 //new route
@@ -45,15 +46,17 @@ app.get("/listings/new",(req,res)=>{
 });
 
 //creat route 
-app.post("/listings",async(req,res)=>{
-    console.log(req.body.listing);
+app.post("/listings",wrapAsync(async(req,res,next)=>{
+    if(!req.body.listing){
+        throw new ExpressError(400,"Send vailid data for listing");
+    }
     let newListing= new Listing(req.body.listing);
     await newListing.save();
     res.redirect("/listings");
-})
+}))
 
 //show route 
-app.get("/listings/:id",(req,res)=>{
+app.get("/listings/:id",wrapAsync((req,res)=>{
     let {id}=req.params;
      Listing.findById(id).then((result)=>{
         let listing =  result;
@@ -61,39 +64,46 @@ app.get("/listings/:id",(req,res)=>{
     }).catch((err)=>{
         console.log(err);
     })
-});
+}));
 
 
 //Update Route
-app.patch("/listings/:id",async(req,res)=>{
+app.patch("/listings/:id",wrapAsync(async(req,res)=>{
     let {id} = req.params;
     let updatedListing= await Listing.findByIdAndUpdate(id, {...req.body.listing}); 
     console.log(updatedListing);
     res.redirect(`/listings/${id}`);
-});
+}));
 
 //Delete Route
-app.delete("/listings/:id",async(req,res)=>{
+app.delete("/listings/:id",wrapAsync(async(req,res)=>{
     let {id}=req.params;
     let deletedListing= await Listing.findByIdAndDelete(id);
     console.log(deletedListing);
     res.redirect("/listings");
-});
+}));
 
 
 //Edit route
-app.get("/listings/:id/edit",async (req,res)=>{
+app.get("/listings/:id/edit",wrapAsync(async (req,res)=>{
     let {id} = req.params;
    let listing = await Listing.findById(id);
    res.render("listings/edit.ejs",{listing});
-})
+}))
 
 
 app.get("/",(req,res)=>{
     res.send("root working");
 })
 
+app.get("*",(req,res,next)=>{
+   next(new ExpressError(404,"Page not found!"));
+})
 
+app.use((err,req,res,next)=>{
+ let {statusCode=500, message="Somthing ain't right"} = err;
+  res.status(statusCode).send(message);
+})
 
 
 
