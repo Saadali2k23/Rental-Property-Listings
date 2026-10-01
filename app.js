@@ -4,7 +4,7 @@ const mongoose= require('mongoose');
 const path=require('path');
 const Listing=require("./models/listing.js");
 const methodOverride=require("method-override");
-const { log } = require('console');
+const { log, error } = require('console');
 const ejsMate= require('ejs-mate');
 const wrapAsync = require("./utils/wrapAsync.js");
 const ExpressError = require("./utils/ExpressError.js");
@@ -30,13 +30,9 @@ async function main(){
 
 
 //index route
-app.get("/listings",wrapAsync((req,res)=>{
-   Listing.find({}).then((result)=>{
-    let listings=result;
+app.get("/listings",wrapAsync( async (req,res,next)=>{
+    let listings = await Listing.find({});
     res.render("listings/index.ejs",{listings});
-   }).catch((err)=>{
-    console.log(err);
-   });
 }))
 
 
@@ -56,14 +52,10 @@ app.post("/listings",wrapAsync(async(req,res,next)=>{
 }))
 
 //show route 
-app.get("/listings/:id",wrapAsync((req,res)=>{
+app.get("/listings/:id",wrapAsync(async (req,res)=>{
     let {id}=req.params;
-     Listing.findById(id).then((result)=>{
-        let listing =  result;
-        res.render("listings/show.ejs",{listing});
-    }).catch((err)=>{
-        console.log(err);
-    })
+    let listing =  await Listing.findById(id);
+    res.render("listings/show.ejs",{listing});
 }));
 
 
@@ -102,7 +94,9 @@ app.get("*",(req,res,next)=>{
 
 app.use((err,req,res,next)=>{
  let {statusCode=500, message="Somthing ain't right"} = err;
-  res.status(statusCode).send(message);
+     console.log(err);
+     res.render("listings/error.ejs",{err});
+//   res.status(statusCode).send(message);
 })
 
 
