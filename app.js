@@ -8,6 +8,7 @@ const { log, error } = require('console');
 const ejsMate= require('ejs-mate');
 const wrapAsync = require("./utils/wrapAsync.js");
 const ExpressError = require("./utils/ExpressError.js");
+const Review = require('./models/review.js');
 
 app.set("views",path.join(__dirname,"views"));
 app.set("view engine","ejs");
@@ -83,11 +84,23 @@ app.get("/listings/:id/edit",wrapAsync(async (req,res)=>{
    res.render("listings/edit.ejs",{listing});
 }))
 
+app.post("/listings/:id/reviews",wrapAsync( async(req,res)=>{
+    let listing = await Listing.findById(req.params.id);
+    let  review = new Review(req.body);
+    listing.reviews.push(review);
+    
+    await review.save();
+    await listing.save();
+    console.log("new review saved");
+    res.redirect(`/listings/${listing._id}`)
+}))
+
 
 app.get("/",(req,res)=>{
     res.send("root working");
 })
 
+//very random route which we have not defined
 app.get("*",(req,res,next)=>{
    next(new ExpressError(404,"Page not found!"));
 })
