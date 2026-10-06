@@ -55,7 +55,7 @@ app.post("/listings",wrapAsync(async(req,res,next)=>{
 //show route 
 app.get("/listings/:id",wrapAsync(async (req,res)=>{
     let {id}=req.params;
-    let listing =  await Listing.findById(id);
+    let listing =  await Listing.findById(id).populate("reviews");
     res.render("listings/show.ejs",{listing});
 }));
 
@@ -86,22 +86,29 @@ app.get("/listings/:id/edit",wrapAsync(async (req,res)=>{
 
 app.post("/listings/:id/reviews",wrapAsync( async(req,res)=>{
     let listing = await Listing.findById(req.params.id);
-    let  review = new Review(req.body);
+    let  review = new Review(req.body.review);
     listing.reviews.push(review);
     
     await review.save();
     await listing.save();
-    console.log("new review saved");
+    console.log(req.body);
     res.redirect(`/listings/${listing._id}`)
 }))
 
+// Delete Review Route
+app.delete("/listings/:id/reviews/:reviewId", wrapAsync(async (req,res,next)=>{
+    let {id,reviewId} = req.params;
+    await Listing.findByIdAndUpdate(id, {$pull: {reviews:reviewId}});
+    await Review.findByIdAndDelete(reviewId);
+    res.redirect(`listings/${id}`);
+}))
 
 app.get("/",(req,res)=>{
     res.send("root working");
 })
 
 //very random route which we have not defined
-app.get("*",(req,res,next)=>{
+app.all("*",(req,res,next)=>{
    next(new ExpressError(404,"Page not found!"));
 })
 
